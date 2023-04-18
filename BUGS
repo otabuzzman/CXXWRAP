@@ -1,0 +1,28 @@
+$Id: BUGS,v 1.22 2001/12/31 15:11:11 deaven Exp $
+
+KNOWN BUGS IN CXXWRAP
+Send bug reports to deaven@execpc.com
+
+parser/database:
+    - there are reduce/reduce conflicts in the grammer
+    - inline class/structure definitions do not yield valid
+      type definitions.
+
+JNI code generation:
+    - typedefs are not followed
+    - template instantiation does not compound C types, it kludges
+      by ORing modifier bits in a flat structure.
+    - if methods are overloaded, only the first is wrapped, even
+      if the wrapped signatures would be different (and so could
+      produce legal overloaded java methods).
+    - JNI code generated from namespaced code is susceptible to
+      name collisions.
+
+HTML page generation:
+    - Using the javadoc {@link class#method (<signature detail>)}
+      does not work if the signature detail is specified.
+    - CSS not used
+
+Manual page generation (need to be re-done similar to HTML):
+    - The <p> directives, other HTML bits are not stripped in the
+      manual pages, let alone processed.

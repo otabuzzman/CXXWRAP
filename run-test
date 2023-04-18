@@ -1,0 +1,160 @@
+#!/bin/sh
+
+# =============================================================================
+# You need to supply the following:
+
+# your C++ compiler
+CXX="g++"
+
+# your C++ link command to make a shared library
+CXX_SHLIB=""
+
+# any libraries that C++ needs for runtime (in JVM dynamic load)
+CXX_LIBS=""
+
+# =============================================================================
+
+case `uname` in
+FreeBSD*)
+# ----------------------------
+# FreeBSD 3.X
+#CXX="g++"
+#CXX_SHLIB="g++ -shared"
+#CXX_LIBS="-lg++ -lstdc++ -lm /usr/lib/libgcc.a -lc /usr/lib/libgcc.a"
+
+# ----------------------------
+# FreeBSD 4.X
+CXX="g++"
+CXX_SHLIB="g++ -shared"
+CXX_LIBS="-lstdc++ -lm /usr/lib/libgcc.a -lc /usr/lib/libgcc.a"
+
+# ----------------------------
+# JDK 1.3 for freebsd (native port)
+JAVA=java
+JDK_INC="-I/usr/local/jdk1.3.1/include -I/usr/local/jdk1.3.1/include/freebsd"
+;;
+
+Linux*)
+# ----------------------------
+# Linux settings
+CXX="g++"
+CXX_SHLIB="g++ -shared"
+JAVA=java
+if [ "$JAVA_HOME" = "" ]; then
+    JAVA_HOME = "/usr/local/java"
+fi
+JDK_INC="-I$JAVA_HOME/include -I$JAVA_HOME/include/linux"
+;;
+
+Sun*)
+# ----------------------------
+# Sun Solaris settings (non multithreaded)
+CXX="CC -pic"
+CXX_SHLIB="CC -G"
+JAVA=java
+JDK_INC="-I/usr/java/include -I/usr/java/include/solaris"
+CXX_LIBS="-lC -lC_mtstubs -lw -lcx -lc"
+;;
+
+IRIX*)
+# ----------------------------
+# SGI IRIX settings
+CXX="CC -n32"
+CXX_SHLIB="CC -n32 -shared"
+JAVA=java
+JDK_INC="-I/usr/java/include -I/usr/java/include/irix"
+CXX_LIBS=""
+;;
+
+*)
+echo "I don't have any settings for your system: `uname`"
+exit 1
+;;
+
+esac
+
+mydiff() {
+    echo $1 $2
+    diff -b $1 $2
+}
+
+test_directory() {
+dir="$1"
+shift
+files=""
+for f in $*
+do
+    files="$files ${dir}/$f"
+done
+
+hooks=""
+if [ -r $dir/import.hook ]; then
+    hooks="$hooks --jni-import-hook=$dir/import.hook"
+fi
+if [ -r $dir/begin.hook ]; then
+    hooks="$hooks --jni-begin-hook=$dir/begin.hook"
+fi
+if [ -r $dir/end.hook ]; then
+    hooks="$hooks --jni-end-hook=$dir/end.hook"
+fi
+
+echo "generating docs and cache in ${dir}..."
+./cxxwrap --verbose \
+          --htmlpath=${dir}/html --html-autolink --html \
+	  --manpath=${dir}/man --man \
+	  --analyze=${dir}/analysis.txt \
+	  --depend=${dir}/depend.txt \
+	  --jni $hooks \
+	  --jni-makefile=${dir}/jni.make \
+	  --jni-packages=examples \
+	  --jni-callbacks \
+	  --jni-attributes \
+	  --jni-operators \
+	  --cache-comments \
+	  --write-cache=${dir}/interface.cache \
+	  $files
+
+echo "generating output in ${dir} from cache..."
+./cxxwrap --verbose \
+          --htmlpath=${dir}/chtml --html-autolink --html \
+	  --manpath=${dir}/cman --man \
+	  --analyze=${dir}/canalysis.txt \
+	  --depend=${dir}/cdepend.txt \
+	  --read-cache=${dir}/interface.cache
+
+echo "Comparing cached output to original output..."
+mydiff ${dir}/analysis.txt ${dir}/canalysis.txt
+mydiff ${dir}/depend.txt ${dir}/cdepend.txt
+for f in `find ${dir}/html -name '*.html'`
+do
+    cf=`echo $f | sed s@${dir}/html@${dir}/chtml@`
+    mydiff $f $cf
+done
+
+echo "compiling java parts of wrapper in ${dir}..."
+unset CLASSPATH
+javac ${dir}/*.java
+
+echo "compiling C++ part of wrapper in ${dir}..."
+for f in ${dir}/*.cxx
+do
+    echo "${f}..."
+    of="`basename $f .cxx`.o"
+    $CXX -c $JDK_INC -I. $f -o ${dir}/${of}
+done
+$CXX_SHLIB -o ${dir}/libwrapper.so ${dir}/*.o $CXX_LIBS
+
+}
+
+test_directory examples Example.h
+
+echo "running Java test JavaTest"
+javac JavaTest.java
+CLASSPATH="." LD_LIBRARY_PATH="examples" LD_LIBRARYN32_PATH="examples" ${JAVA} JavaTest
+
+echo "running multi-pass test"
+./cxxwrap --verbose --package-prefix=org.part1 --jni \
+    --write-cache=examples/part1.cache examples/part1.h
+./cxxwrap --verbose --package-prefix=org.part2 --jni \
+    --read-cache=examples/part1.cache examples/part2.h
+

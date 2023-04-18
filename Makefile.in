@@ -1,0 +1,70 @@
+SHELL=/bin/sh
+
+CXX = @CXX@
+YACC = @YACC@
+NROFF = @NROFF@
+.SUFFIXES: .cxx .y .o
+
+OBJ = \
+    html.o \
+    main.o \
+    man.o \
+    misc.o \
+    parser.o \
+    AnalyzeEmitter.o \
+    ArrayCType.o \
+    Arg.o \
+    Class.o \
+    ClassJar.o \
+    CommentParser.o \
+    CType.o \
+    CreateCType.o \
+    DependEmitter.o \
+    Emitter.o \
+    EnumCType.o \
+    FunctionCType.o \
+    JavadocLink.o \
+    JNIEmitter.o \
+    JNICType.o \
+    Method.o \
+    ObjectCType.o \
+    PrimitiveCType.o \
+    StringPool.o \
+    Token.o \
+    VoidCType.o
+
+all: cxxwrap cxxwrap.1
+
+cxxwrap: $(OBJ)
+	$(CXX) -o $@ $(OBJ)
+
+cxxwrap.1: cxxwrap.man
+	-$(NROFF) cxxwrap.man > $@
+
+api: cxxwrap
+	./cxxwrap --html --htmlpath=api *.h
+	
+.y.cxx:
+	$(YACC) -v $<
+	/bin/rm -f $*.cxx
+	/bin/mv y.tab.c $*.cxx
+
+.y.o:
+	$(YACC) -v $<
+	/bin/rm -f $*.cxx
+	/bin/mv y.tab.c $*.cxx
+	$(CXX) -c $*.cxx
+
+.cxx.o:
+	$(CXX) -c $<
+
+depend:
+	makedepend -Y -fMakefile *.cxx >/dev/null 2>&1
+
+clean:
+	/bin/rm -f cxxwrap cxxwrap.1 y.output *.o config.cache
+	/bin/rm -rf api
+
+distclean: clean
+	/bin/rm -f config.log config.status examples/*.class examples/*.o examples/*_jni.cxx examples/*.java examples/*.txt examples/*.so examples/jni.make
+	/bin/rm -rf examples/man examples/html examples/cman examples/chtml

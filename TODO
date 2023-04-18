@@ -1,0 +1,39 @@
+
+$Id: TODO,v 1.17 2000/09/06 10:24:18 deaven Exp $
+
+List of things I'd like to implement in cxxwrap but have
+not gotten around to yet.  Send change requests or fixes
+to deaven@execpc.com.
+
+parser
+
+    save CTEXT from parser and be able to reproduce headers,
+    filtering out deprecated apis.
+
+    parse IDL class descriptions
+
+html
+
+    use stylesheets, more like javadoc
+
+    add deprecated API list, like javadoc
+
+jni
+
+    add a way to make JNI native libs loaded in "static" code section
+    of each class, without enforcing a policy on naming of jni libs.
+
+    correct relative URLs in java comments, so that diagrams or other
+    references can work in C++ and java API pages.
+
+    do more to resolve conflicts between methods overriding those of
+    java.lang.Object.
+
+    add memory management API for tieing delete() to finalize().
+
+    wrap C functions into a single class with static methods
+
+other
+
+    add a "style-checker" module to help enforce API policies
+

@@ -1,0 +1,40 @@
+Newsgroups: comp.lang.java.announce,comp.lang.java.programmer,comp.lang.java.softwaretools,comp.lang.c++,comp.programming.literate,comp.software-eng
+Subject: [ANN] Free C++/Java development tool
+From: David Deaven <deaven@execpc.com>
+Content-type: text/plain; charset=us-ascii
+
+Free C++/Java development software announcement:
+
+    I have recently released a new version of "cxxwrap", which is free
+    software for automatically wrapping C++ interfaces in Java JNI,
+    and for producing javadoc-style HTML documentation of the C++
+    interface (even parts that do not translate to java).  Welcome
+    aboard anybody who had to, or has yet to, solve this same tedious
+    "where's the high-performance java interface" problem for a large
+    legacy C++ code base.
+
+What is cxxwrap?
+
+    - An automatic java wrapper for C++ classes, which produces
+      java language bindings using Sun's JNI (Java Native
+      Interface).
+ 
+    - Yet another HTML C++ documentation generator.  cxxwrap 
+      produces output very similar to the Java Development Kit 
+      javadoc in 1.2 (and the HTML pages are very fast to load,
+      they contain no excessive graphics or javascript, etc.) 
+      The class and method documentation is also kept in the java
+      language binding, so you can run javadoc on the java API as
+      well.
+
+    - Unix manual page generator.  Class documentation can be written
+      in troff form suitable for use with man(1).
+
+Where is cxxwrap?
+
+    http://deaven.net/~deaven/Software/cxxwrap/
+
+-------------------------------------
+David Deaven        deaven@execpc.com
+http://deaven.net/~deaven
+

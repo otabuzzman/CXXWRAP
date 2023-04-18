@@ -1,0 +1,41 @@
+#!/bin/sh
+# This script is designed to run on the sourceforge.net shell server
+# from a cvs checkout 
+
+CURDIR=`/bin/pwd`
+RELDIR=deaven@shell.sourceforge.net:/home/groups/c/cx/cxxwrap/htdocs
+TMPDIR=/tmp/cxxwrap-$$
+D8=`date +%Y%m%d`
+VERSION="CXXWRAP_$D8"
+
+echo "Preparing to release version $VERSION"
+
+cvs commit -m release
+cvs tag -F $VERSION
+
+mkdir -p $TMPDIR
+cd $TMPDIR
+cvs export -r $VERSION cxxwrap
+/bin/rm -rf cxxwrap-${D8}
+/bin/mv cxxwrap cxxwrap-${D8}
+mkdir export
+tar cvfz export/cxxwrap-${D8}.tar.gz cxxwrap-${D8}
+
+# do a build/test on the shell server
+cd cxxwrap-${D8}
+./configure
+make
+./run-test
+/bin/cp CHANGELOG ../export/CHANGELOG.txt
+/bin/cp LICENSE ../export/LICENSE.txt
+nroff -man cxxwrap.man | col -b > ../export/cxxwrap.1.txt
+nroff -man examples/man/man3/Example.3 | col -b > ../export/Example.3.txt
+/bin/cp -fr examples doc index.html ../export
+cd $CURDIR
+
+# send the new files
+scp -r ${TMPDIR}/export/* ${RELDIR}
+
+# clean up
+/bin/rm -rf $TMPDIR
+exit 0

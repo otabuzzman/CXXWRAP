@@ -1,0 +1,467 @@
+20060126 Dave Deaven
+  - updates for GCC 4 compiler
+
+20040103 Dave Deaven
+  - Fix memory error in TypeMap.h
+  - make parser construct enum and method lists in proper order,
+    avoiding parser stack overflow in large enums and classes.
+
+20030523 Dave Deaven
+  - fix recursive typedef bug in JNI (reported by John O'Reilly)
+
+20021009 Dave Deaven
+  - Fix bugs introduced when the operator code was added.
+  - Add command line switch to enable operator wrapping.
+  - cosmetic missing ;'s in parser.y added
+  - char* cast needed for sun 6.0 compiler in JNIEmitter.cxx
+
+20020607 Kristian Eide
+  - Overloaded C++ operators are wrapped as Java methods. Characters
+    not allowed in the method name are re-written according to their
+    meaning (e.g. 'operator+' becomes 'opAdd' in Java).
+  - Java methods should be considered duplicates even if their return
+    values differ.
+
+20020528 Kristian Eide & Morten Vold
+  - Emit overriding equals() and hashCode() methods for Java classes.
+  - Fix wrapping of enum return types.
+  - If null reference is passed to a callback registrar, a NULL value
+    is now passed to the native function.
+
+20020515 Dave Deaven
+  - Fix emitted JNI code to not assume ANSI scoping for 'for(int x=0;...'
+  - Properly cast Byte versus Char JNI arrays (Windows platform cares)
+  - swap intializer order in globals.h to prevent warning with -Wall
+  - designate --jni-{callback,attributes} options for optional JNI maps
+
+20020513 Kristian Eide & Morten Vold
+  - Add support for wrapping callbacks as Java interfaces.
+      Limitations: The function registering the callback must also take
+                   a void* (userdata), and the same pointer must be passed
+                   to the callback function. Because of this, callback
+                   support must be enabled explicitly by a command line
+                   switch.
+
+20020513 Kristian Eide & Morten Vold
+  - Wrap public attributes as methods, except for enum variables
+  - Add some tests of public attributes to Example.h
+  - Add setup for Linux systems in the run-test script
+
+20020509 Dave Deaven
+  - fix anonymous enumerated variables (got wrapped as methods), by restoring 
+    JNIEmitter behavior to not wrap attributes.
+  - do not wrap arrays of unknown objects
+
+20020508 Kristian Eide & Morten Vold 
+  - Added member functions JavaJNITypeName() and JNIFunctionTypeName()
+    to appropriate class CType, and implemented them as needed in
+    subclasses.  Needed to support multidimensional arrays more
+    cleanly (see CType.h for details).
+  - Wrap multi-dimensional arrays.
+  - Fix ArrayCType's copy constructor to call super class CType's copy
+    constructor (the wrong constructor was previously used)
+  - When expanding typedefs, the expanded type should not have the
+    typedef bit set. Fixed.
+  - When passing enum values through to Java code, expand the C++
+    class name to the corresponding full dotted Java class name.
+  - Wrap public member fields to get methods, so they can be accessed
+    in Java.
+  - Fix "reference to pointer"-arguments in constructors. They only
+    worked for regular methods.
+  - Removed return statement from the JNI code emitted by
+    ObjectCType::JNITypeName(), as the return type might not be void.
+  - Emit several instances of methods where arguments have default
+    values, but remove last argument from each instance.  This way, we
+    mimic this C++ feature on the Java side.
+
+20020501 Dave Deaven
+  - retract "modify base CType of ArrayCType" add below
+  - minor warnings removed
+  - fix Makefile was hanging on "mv", use "/bin/mv".
+
+20020423 Kristian Eide & Morten Vold
+  - Correctly wrap enum types, by passing through default value
+    assigments verbatim to the Java code.
+  - Arguments to FunctionCTypes are typedef-expanded in the correct
+    scope.
+  - Fix expansion of typedefs for FunctionCType types (rtype and
+    arguments).
+  - If the result of a typedef expansion is an ArrayCType, modify its
+    base CType instead of the ArrayCType itself.
+
+  - Parse optional bitfield specifications.
+  - Fix const modifier for pointers ("<type> * const" was previously
+    interpreted as "const <type> *"). Now parses "const <type> *
+    const" as well.
+  - Parse _named_ arguments with _double_ array indirection.
+  - Parse member variables with _double_ array indirection.
+  - Parse typedefs of both functions and function pointers,
+    and fix indirection counting for the resulting FunctionCType.
+  - Added opt_scoped_id (operators can be declared as Foo::operator).
+  - Parse forward declaration of templates (no class body).
+  - Added LEFTEQUALS (<=) and RIGHTEQUALS (>=) to cpp_operator.
+  - Parse forward declaration of functions.
+  - Any number of ';' can be appended to function declarations.
+  - Parse assigment of default values to unnamed arguments.
+  - Parse unions and treat them the same way as structs.
+  - Parse member variables of type function pointer.
+  - Parse typedefing of arrays.
+
+20020420 Dave Deaven
+  - fix win32 cache write (binary file mode)
+
+20020417 Morten Vold & Kristian Eide
+  - Fix bugs in new typedef code, enable recursive typedefs.
+  - Add support for type suffixed number constants.
+  - Fix C++ syntax parsing for "class Foo * foo;" member variable
+    declarations.
+
+20020416 Dave Deaven
+  - Make typedefs scope properly (class and file level)
+
+20020415 Kristian Eide & Morten Vold
+  - Added support for wrapping references to object pointers (*&).
+
+20020414 Dave Deaven
+  - clean typedef code a bit, remove STL dependency
+
+20020409 Kristian Eide & Morten Vold
+  - Added support for handling typedefs correctly (uses STL hash_map)
+      Limitations: Does not handle typedefs declared with the same name
+                   in different scopes (they will be overwritten globally).
+                   Also does not handle inherited typedefs.
+
+20020215 Dave Deaven
+  - added warning message for dummy return arrays
+
+20020213 Maria Ananieva
+  - parser yyerror should be macro, not function,
+      breaking yacc on Solaris 5.6
+
+20011231 Dave Deaven
+  - fix C++ syntax parsing for odd const and typedf struct (problems
+      reported by Chris Bennett)
+
+20011113 Dave Deaven
+  - fix cache read/write bug on IRIX MIPS (7.3 compiler)
+  - fix scanning of additonal C++ operator syntax
+
+20011102 Dave Deaven
+  - fix cache read for JNICType objects
+  - add LICENSE
+  - fix win32 project files
+
+20010930 Dave Deaven
+  - doc fixes and add automatic release script
+
+20010827 Dave Deaven
+  - add ability to wrap JNI types (JNIEnv* and jobject) in C++ methods
+
+20010611 Dave Deaven
+  - fix analyze emitter dtor method name (tilde dropped)
+
+20010608 Dave Deaven
+  - remove debugging printf from 0607 drop, and fix array length overrun
+
+20010607 Dave Deaven
+  - fix JNI code generated for C++ methods "foo(char** a)", where
+      elements a[i] are changed as oppsed to a[i][j].
+
+20010425 Dave Deaven
+  - test object invoke code, fix bugs
+
+20010424 Dave Deaven
+  - remove restrictions on objects in pure virtual invocation
+    extension code (return type still cannot be an object)
+
+20010329 Dave Deaven
+  - add handling of string constants in arg initializers
+
+20010301 Dave Deaven
+  - fix memory corruption in Class.cxx
+  - upload to sourceforge
+
+20010109 Dave Deaven
+  - add "--public-doc" option
+
+20001217 Dave Deaven
+  - fix HTML output method summary
+  - add "@date" as recognized javadoc tag
+
+20001127 Dave Deaven
+  - make analyze and html emitter find base class method
+       documentation.
+
+20001115 Dave Deaven
+  - fix several bugs:
+       - HTML enumerations
+       - multiple vars on a line
+       - return values linked in html
+       - check new class defs if already exist, ignore
+  - fix compile error in JNIEmitter for gcc 2.95.1
+  - cosmetic update to html output, be more like javadoc
+
+20001107 Kevin Radke
+  - file-name globbing added since the Windows "shell" (if you can
+    call it that) is not going to automatically expand a parameter
+    such as *.h. 
+
+20001016 Dave Deaven
+  - fix bug in AnalyzeEmitter, methods not printed if classes empty.
+  - JNIEmitter null pointer dereference fixed
+  - man page build rule errors ignored
+  - documentation for "adding to an API" updated
+  - test for "adding onto an API" added to run-test
+
+20001003 Dave Deaven
+  - fix "--package-prefix" option on Windows platform for Terry Zhu
+
+20000919 Dave Deaven
+  - fix bug reported by Girish K Muralidharan, duplicate constructors
+      in java if "int" and "unsigned int" are possible args.
+  - rename all java.lang.Object methods, not just a few
+  - print pointer types with indirection count > 1 correctly in C++ API
+
+20000906 Dave Deaven
+  - clean up "--analyze" output
+
+20000905 John Skinner
+  - make string null <--> NULL work for JNI (both directions)
+
+20000901 Dave Deaven
+  - fix multiple enum definitions from HTML documentation
+  - make JNI code avoid calling pure virtual functions for classes
+	extended in java
+
+20000821 Dave Deaven
+  - allow JNI extentions of methods with all primitive types in args and
+      return value.
+  - prevent messages declaring that destructors cannot be JNI wrapped.
+  - add "--cache-comments" option
+
+20000816 Dave Deaven and John Skinner
+  - make JNI copy primitive arrays if data sizes do not match
+
+20000809 Dave Deaven
+  - fix underscores in class names
+  - add cache testing to run-test
+  - make enum types substituted fopr all emitters, instead of object
+      types which an emitter has to chase down as being an enum.
+
+20000806 Dave Deaven
+  - add --{read,write}-cache options
+
+20000731 Dave Deaven
+  - fix memory corruption due to return of temporary variable address
+      in Class.cxx.
+  - add ability to return Java null for NULL in JNIEmitter.cxx
+  - extra code to create paths correctly on Windows 95/98
+  - remove parser.cxx from Makefile default rules
+
+20000706 Dave Deaven
+  - fix to compile JNI against both Sun JDK 1.1 and 1.2 JNI interface
+      definitions.
+  - work around severe Microsoft Visual C++ 6.0 bug which shows up
+      in the C++ JNI code emitted by cxxwrap (causes compiler crash with
+      "INTERNAL COMPILER ERROR").
+
+20000705 Dave Deaven
+  - add Windows nmake makefile.
+  - add use of thread attach API for JNI extended calls.
+
+20000628 Dave Deaven
+  - remove "abstract" from java classes with callback adapter ctors;
+      in concept they are abstract but technically not, and later
+      versions of javac barf on it.
+
+20000627 Dave Deaven
+  - fix NT specific bug in emitting java imports, kept forward
+      slashes from include paths
+  - use JNI "{New,Delete}GlobalRef" for abstract adapters, fixing
+      some JNI panics
+  - always use "." in dependency checking output.
+  - protect the finalize() method against JNI wrapping (rename), 
+      fixing some severe memory corruption problems!
+  - alphabetize lists in --depend emitter
+  - fix bug preventing "const" functions from getting javadoc
+      attached properly.
+  - make HTML doc use base class docs, if derived method docs
+      are missing.
+  - change template expansion strategy default to "auto"
+
+20000601 Dave Deaven
+  - fix bug emitting two #includes for the class C++ header file in *_jni.cxx
+  - fix hole where constructor java code is missing jni-hook code
+  - add rule to create C++ --> Java calling adapter classes
+      automatically from pure virtual functions.  Currently the
+      signature must be "()V".
+
+20000531 Dave Deaven
+  - add handling of namespaces
+  - add HTML documentation
+
+20000429 Dave Deaven
+  - add "--html-printable" option for html2ps/ps2pdf generation of PDF
+        documentation.
+  - fix HTML output to pass weblint
+
+20000411 Dave Deaven
+  - handle scoped enumerations as types in wrapped methods:
+	A::Foo is a java int if Foo is an enumeration in A, and
+	can be used in any class's API.
+  - fix parsing of hex numbers
+
+20000317 John Skinner
+  - make --jni-*-hook go in the right place after a super() invocation
+  - add comment tag to prevent jni hooks for individual methods
+
+20000311 Dave Deaven
+  - fix memory leak in generated JNI code with char** array
+  - add --jni-*-hook options and feature
+  - cast jobject to jstring in char** feature, some compilers objected
+
+20000303 Dave Deaven
+  - add capability to handle char** as an argument to methods
+  - fix template bug for template parameters at non-zero indirection levels
+
+20000218 Dave Deaven
+  - fix static char[] bugs which showed up in cygnus NT build
+
+20000106 Dave Deaven
+  - add --package-prefix option for Bill Kasper.
+
+19991213 Dave Deaven
+  - change internal ctor signature to use java.lang.Long, to
+    distinguish from *real* ctors that use a long.
+  - fix typo in --template-package=auto code, to evaluate package
+    dependencies correctly.
+
+19991208 Dave Deaven
+  - fix JNI code generation for methods returning objects (not pointers
+    or references to objects), return allocated on heap instead of stack.
+  - parser fixes for friend function declarations and nested scoped
+    identifiers
+  - add class/package dependency emitter
+
+19991115 Dave Deaven
+  - allow template arguments to be left off of objects in
+    class definitions, matching C++ rules.  (e.g.,
+
+        template<X> class B { B(const B& other); }
+     
+    is equivalent syntactically to 
+     
+	template<X> class B { B(const B<X>& other); } )
+
+19991113 Dave Deaven
+  - use ClassJar for primary class storage, speed up JNI generation.
+  - minor bugfixes
+
+19991014 Grzegorz Makarewicz
+  - fix JNI C method name generation when --jni=classpath=""
+
+19991008 Dave Deaven
+  - make JNI method names classwise serial numbers, so they are the
+    same on all OS platforms.
+  - enable parsing of constant C expressions for enum values.
+    This currently introduces a series of reduce/reduce conflicts in the
+    parser, which are innocuous, but are in very bad form.  A side
+    effect is better C expression parsing in general (following the
+    ANSI C reference grammer from Kernighan and Ritchie).
+  - change command line options to follow POSIX style, --arg=val
+  - add typedef listing to html output
+
+19991002 Dave Deaven
+  - added "direct subclasses" list to html doc
+  - added class diagram browser
+
+19991001 Dave Deaven
+  - change the way templates are expanded, to place them into the
+    expander's package.
+  - cull misplaced constructors from the method list, some macros were
+    being interpreted as constructors.
+  - fix java constructors for classes whose superclass has no default
+    constructor.
+  - change parser warning messages, to avoid the incorrect laying of
+    blame on the C++ header, when cxxwrap can't parse it.
+
+19990930 Dave Deaven
+  - fix class-scoped enumeration handling in JNI
+  - fix boolean JNI
+  - fix JNI for static methods
+
+19990927 Dave Deaven
+  - add some JNI regression testing
+  - enable bool <--> boolean C++ to java conversion
+  - fix bugs for template expansions when same template gets used in
+    multiple roles (parent, arg, etc) with different parameters.
+
+19990913 Dave Deaven
+  - complete jni implementation, add test to run-test
+  - enhance template support considerably
+
+19990729 Dave Deaven
+  - fix bug in html emitter causing regular html links in @see clauses
+    to be dropped.
+
+19990601 Dave Deaven
+  - fix some html format bugs, unlinked references at the beginning of
+    a line.
+
+19990526 Dave Deaven
+  - make method arguments automatically link to referenced classes
+  - compress HTML table for enumerations and method summary
+  - fix HTML heritage tree class links, which were broken
+
+19990515 Dave Deaven
+  - fix some Solaris compile issues in parser
+  - add --analyze option to compute statistical API coverage, --lint
+    to warn of "bad" practice or missing API doc.
+
+19990504 Dave Deaven
+  - added parsing of class attributes
+  - fixed parse error for scoped types
+
+19990503 Dave Deaven
+  - added support for default argument values in methods
+
+19990421 Dave Deaven
+  - fixed some parser bugs, mostly for nested templates
+  - lexical scan of // comment fixed (interfered with cpp directive scan)
+
+19990420 Dave Deaven
+  - fixed @return in method index bug
+  - performance improvement (scales better for large code sets)
+  - added PackageSummary file recognition
+
+19990419 Dave Deaven
+  - CommentParser enabled, javadoc works now
+  - added @header and @package implementation (see manual page)
+  - changed html output to look more like Sun's javaodc.
+  - moved header file section to precede class description
+
+19990415 Dave Deaven
+  - CommentParser added but not enabled by default.  This class will
+    unify comment parsing for html and man pages for various
+    comment styles (e.g. javadoc).
+  - fix code parser to hande all operator methods in C++ (but not to 
+    represent them internally, just recognize them and avoid harmful
+    parse errors).
+
+19990413 Dave Deaven
+  - fixed dangling pointer on copy ctor causing cash
+  - spelling fixes in man page
+
+19990412 Dave Deaven
+  - added rudimentary template handling for comments
+  - fixed leading asterisk skip logic bug
+  - sort method index with ctor/dtor at top
+  - added TODO list of feature requests.
+
+19990409 Dave Deaven
+  - fixed ~ in dtor in method index
+  - fixed up html handling for javadoc comments
+  - added facility to label foreign classes in heritage section
+
+19990408 Dave Deaven
+  - first release

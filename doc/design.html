@@ -1,0 +1,361 @@
+<!DOCTYPE html PUBLIC "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+  <meta http-equiv="Content-Type"
+ content="text/html; charset=iso-8859-1">
+  <meta name="Author" content="David Deaven">
+  <meta name="Keywords" content="cxxwrap">
+  <title>cxxwrap documentation</title>
+</head>
+<body alink="#ff0000" bgcolor="#ffffff" link="#0000ef" text="#000000"
+ vlink="#51188e">
+<h1>
+CXXWRAP Design</h1>
+Table Of Contents
+<blockquote><a href="#introduction">Introduction: what is cxxwrap?</a></blockquote>
+<blockquote><a href="#jni%20code%20generation">JNI code generation</a>
+  <blockquote><a href="#general">General line of attack</a>
+    <br>
+    <a href="#argument%20conversion">Argument conversion</a>
+    <br>
+    <a href="#final">Finalization and destuction</a>
+    <br>
+    <a href="#extending%20in%20java">Extending classes in java</a>
+    <br>
+    <a href="#adding">Adding on to an already wrapped API</a></blockquote>
+</blockquote>
+<h2>
+<a name="introduction"></a>Introduction: what is cxxwrap?</h2>
+cxxwrap is a software engineering tool which scans C++ header files
+defining
+a set&nbsp; of classes.&nbsp; Once the class interface definitions have
+been scanned, cxxwrap can
+<ul>
+  <li>
+Document the interface(s) using HTML, in a style similar to that of
+Sun's
+javadoc,</li>
+  <li>
+Document the interface(s) using Unix manual pages,</li>
+  <li>
+Wrap the interface(s) in Java using JNI,</li>
+  <li>
+Describe the class and package dependencies of the interface(s), and</li>
+  <li>
+Analyze the interface(s) to compute statistical data about the API.</li>
+</ul>
+<h2>
+<a name="jni code generation"></a>JNI code generation</h2>
+The primary reason cxxwrap was written is to generate JNI code to bind
+a Java API to one or more C++ libraries.
+<h3><a name="general"></a>General line of attack</h3>
+All java objects are "pointers", in the C++ sense.&nbsp; (For example,
+the assignment operator in Java is defined to be a pointer copy.)&nbsp;
+The diagram below shows how cxxwrap keeps a Java object tied to a C++
+implementation.&nbsp;
+Invocations of methods on the object are decoded by JNI C++ code, and
+result
+in invocations on the C++ object implementation.
+<blockquote><tt>MyObject jA = new MyObject(); // invokes C++ constructor</tt>
+  <br>
+  <tt>jA.foo(37);</tt></blockquote>
+<img alt="JNI connection in cxxwrap" src="jni1.gif" nosave=""
+ style="width: 607px; height: 285px;">
+<br>
+Note that if some Java code copies an object with the assignment
+operator,&nbsp;
+both the original and new object pointers are tied to a single instance
+of the C++ implementation:
+<blockquote><tt>MyObject jB = jA; // does not invoke C++ constructor</tt></blockquote>
+<img alt="Pointers in cxxwrap" src="jni1_1.gif" nosave=""
+ style="width: 553px; height: 232px;">
+<br>
+If the wrapped API provides another way to access a refererence to
+the C++ object, one can also end up with two separate Java objects,
+each
+of which refers to the <i>same</i> C++ object.&nbsp; This is a
+fundamendally
+different case than the last example:
+<blockquote><tt>MyObject jA = someObject.getContainedA();</tt>
+  <br>
+  <tt>MyObject jB = anotherObject.getContainedA();</tt></blockquote>
+<img alt="Duplicate pointers in cxxwrap" src="jni4.gif" nosave=""
+ style="width: 607px; height: 441px;">
+<br>
+In the diagram above, both jA and jB refer to the same object, but
+Java doesn't know this.&nbsp; It should now be obvious that dealing
+with
+garbage collection is going more difficult in a wrapped Java API (more
+about that <a href="#final">later</a>.)
+<h3><a name="argument conversion"></a>Argument conversion</h3>
+The story gets a bit trickier in the case of non-primitive method
+arguments.&nbsp;
+In this case, the JNI code layer must do more work, using Sun's JNI
+interface
+APIs to gain access to a suitable representation of the JVM's internal
+data:
+<blockquote><tt>jA.foo(new int[3] {1, 2, 3});</tt></blockquote>
+<img alt="Argument conversion in cxxwrap" src="jni2.gif" nosave=""
+ style="width: 607px; height: 285px;">
+<br>
+(The JNI code shown above is schematic.&nbsp; Refer to the Sun API
+to see the real names of the JNI interface methods used to convert
+data.)
+<p>One important point to make is that during the course of the method
+invocation, a temporary copy of the entire array may be made, which is
+then destroyed prior to the method return.&nbsp; So, data pointers <i>cannot
+be transported across the Java/C++ boundary.</i>&nbsp; This is a severe
+and fundamental limitation with the JNI interface (<a href="#footnote">*</a>).&nbsp;
+Applications must be sure not to rely on the contents of array
+arguments
+after invocation of one of the cxxwrap JNI methods.
+</p>
+<p>cxxwrap can use this method to convert all arrays of primitives, as
+well as the java.lang.String primitive type, which becomes a C++
+"char*".&nbsp;
+The complete list of type mappings from C++ to Java implemented by
+cxxwrap
+is as follows:
+<br>
+&nbsp;
+</p>
+<center>
+<table nosave="" border="1">
+  <tbody>
+    <tr>
+      <td><b>C++ type</b></td>
+      <td><b>Java type</b></td>
+    </tr>
+    <tr>
+      <td>void</td>
+      <td>void</td>
+    </tr>
+    <tr>
+      <td>int</td>
+      <td>int</td>
+    </tr>
+    <tr nosave="">
+      <td nosave="">short int</td>
+      <td>short</td>
+    </tr>
+    <tr>
+      <td>long int</td>
+      <td>long</td>
+    </tr>
+    <tr>
+      <td>float</td>
+      <td>float</td>
+    </tr>
+    <tr>
+      <td>double</td>
+      <td>double</td>
+    </tr>
+    <tr>
+      <td>bool</td>
+      <td>boolean</td>
+    </tr>
+    <tr>
+      <td>char
+      <br>
+unsigned char</td>
+      <td>byte</td>
+    </tr>
+    <tr>
+      <td>[const] char*</td>
+      <td>java.lang.String&nbsp;
+      <br>
+(converted using UTF)</td>
+    </tr>
+    <tr>
+      <td>[const] unsigned char*</td>
+      <td>byte[]</td>
+    </tr>
+    <tr>
+      <td>[const] int*</td>
+      <td>int[]</td>
+    </tr>
+    <tr>
+      <td>[const] short int*</td>
+      <td>short[]</td>
+    </tr>
+    <tr>
+      <td>[const] long int*</td>
+      <td>long[]</td>
+    </tr>
+    <tr>
+      <td>[const] float*</td>
+      <td>float[]</td>
+    </tr>
+    <tr>
+      <td>[const] double*</td>
+      <td>double[]</td>
+    </tr>
+    <tr>
+      <td>[const] bool*</td>
+      <td>boolean[]</td>
+    </tr>
+    <tr>
+      <td><i>C</i></td>
+      <td><i>C</i></td>
+    </tr>
+    <tr>
+      <td>[const] <i>C</i>*</td>
+      <td><i>C</i></td>
+    </tr>
+    <tr>
+      <td>[const] <i>C</i>&amp;</td>
+      <td><i>C</i></td>
+    </tr>
+  </tbody>
+</table>
+</center>
+<h3>
+<a name="final"></a>Finalization and destruction</h3>
+When a Java object is deleted (by the JVM, which will also invoke the
+object's
+finalize() method), the C++ implementation underneath could also be
+deleted...
+right?&nbsp; No, because there may be other C++ objects in the system,
+hidden from the JVM, which are holding and using pointers to the C++
+implementation.&nbsp;
+We saw before that this can happen even on the Java side, if multiple
+references
+to the same underlying C++ object are obtained using the wrapped
+API.&nbsp;
+(There are other approaches to wrapping interfaces in Java which can
+co-exisit
+peacefully with garbage collection, but they incur a heavy performance
+price, such as maintainence of a large object mapping table.)
+<p>cxxwrap provides an explicit method on all Java objects called
+delete(),
+which invokes the C++ destructor.&nbsp; Applications should use
+delete()
+just as they would in C++, following the analogy that all Java objects
+are pointers.&nbsp; If a wrapped Java object fails to call delete(), a
+memory leak can occur on the C++ heap.
+</p>
+<blockquote><tt>jA.delete(); // invokes C++ destructor</tt></blockquote>
+<img alt="Destructors in cxxwrap" src="jni3.gif" nosave=""
+ style="width: 607px; height: 285px;">
+<h3><a name="extending in java"></a>Extending classes in java</h3>
+One consequence of the approach cxxwrap uses to implement java wrappers
+is that the resilting java classes cannot be extended, in general, by
+deriving
+new subclasses in java.&nbsp; That's because when the C++
+implementation
+invokes a method from the object's virtual table, it's always the C++
+method,
+never the new java method, which gets invoked.&nbsp; For example, lets
+say you have the following cxxwrapped class interface:
+<blockquote><tt>public class A {</tt>
+  <br>
+  <tt>&nbsp;&nbsp;&nbsp; public A();</tt>
+  <br>
+  <tt>&nbsp;&nbsp;&nbsp; public void foo();</tt>
+  <br>
+  <tt>}</tt></blockquote>
+and you then derive a new class in java:
+<blockquote><tt>public class B extends A {</tt>
+  <br>
+  <tt>&nbsp;&nbsp;&nbsp; public void foo() { System.out.println("B
+foo!");
+}</tt>
+  <br>
+  <tt>}</tt></blockquote>
+You can then create an object of class B and pass it, as an A, to some
+C++ wrapped API.&nbsp; But when C++ invokes the foo() method on your
+object,
+only A's foo() gets called -- never B's foo() -- because the C++
+virtual
+table cannot contain a pointer to the java version of foo() in class B.
+<p>cxxwrap allows you to extend abstract classes in java, for any pure
+virtual method.&nbsp; If you define A as follows in C++:
+</p>
+<blockquote><tt>class A {</tt>
+  <br>
+  <tt>public:</tt>
+  <br>
+  <tt>&nbsp;&nbsp;&nbsp; A();</tt>
+  <br>
+  <tt>&nbsp;&nbsp;&nbsp; A(int bar);</tt>
+  <br>
+  <tt>&nbsp;&nbsp;&nbsp; virtual void foo() = 0;</tt>
+  <br>
+  <tt>};</tt></blockquote>
+then cxxwrap will generate constructors for class A in java, which
+yield
+java objects whose pure virtual methods can be extended.&nbsp; Now,
+when
+you write class B as shown above, the java version of foo() will be
+invoked
+whenever C++ invokes foo().&nbsp; This is accomplished by generating a
+hidden adapter class in C++ for every abstract class.&nbsp; It is the
+hidden
+adapter whch gets constructed by class A's constructors, not a C++
+class
+A directly.
+<p>If your native code creates native threads (e.g pthreads) which are
+compatible with the JVM you run in, these threads can invoke Java
+virtual
+methods via a cxxwrap API.&nbsp; When a Java method is invoked in
+cxxwrap-generated
+C++ code, the JNI thread attach API is used to ensure that the calling
+thread is known to the JVM.
+</p>
+<h3><a name="adding"></a>Adding on to an already wrapped API</h3>
+Let's say you are given a cxxwrap JNI interface to a set of C++
+classes,
+for which you also have the C++ header files (let's say "<tt>vendor/*.h</tt>".&nbsp;
+You'd like to add some more classes from your own package, whose C++
+header
+files are in "<tt>local/*.h</tt>".&nbsp; Here's how to invoke cxxwrap
+to
+do so:
+<blockquote><tt>cxxwrap --jni --jni-packages=local vendor/*.h local/*.h</tt></blockquote>
+The "--jni-packages" argument tells cxxwrap to emit JNI interfaces only
+for your files.&nbsp; cxxwrap still needs to scan the vendor files, to
+build up its internal database of objects in the vendor package(s).
+<p>A more compact and reliable way to accomplish this is to use the
+"--write-cache"
+and "--read-cache" options of cxxwrap.&nbsp; The following example is
+taken
+from the regression test for cxxwrap:
+</p>
+<p>First, the base library is wrapped:
+</p>
+<blockquote><tt>cxxwrap --verbose --package-prefix=org.part1 --jni \</tt>
+  <br>
+  <tt>&nbsp;&nbsp;&nbsp; --write-cache=examples/part1.cache
+examples/part1.h</tt></blockquote>
+Here, the classes found in "examples/part1.h" will be assigned to the
+package
+"org.part1.examples", and all classes and template definotions will be
+saved in "examples/part1.cache" for later use.&nbsp; Next, the add-on
+library
+which depends on classes in "examples/part1.h" is wrapped:
+<blockquote><tt>./cxxwrap --verbose --package-prefix=org.part2 --jni \</tt>
+  <br>
+  <tt>&nbsp;&nbsp;&nbsp; --read-cache=examples/part1.cache
+examples/part2.h</tt></blockquote>
+Here, the new classes defined in "examples/part2.h" are assigned to the
+"org.part2.examples" package, but they can still refer to classes from
+the first wrapping session. No "--jni-packages" option is needed,
+because
+cxxwrap marks classes read from a cache as already wrapped and will not
+wrap them again.
+<p>This pattern can be extended to an arbitrary number of dependent
+libraries,
+by using more than one "--read-cache: option on the later wrapping
+sessions.
+</p>
+<p></p>
+<hr width="100%"><br>
+<a name="footnote"></a>*This limitation may be intentional on Sun's
+part as a part of a deliberate business strategy.&nbsp; If only JVM
+developers
+can implement high-performance native code under a Java API, then they
+gain a significant strategic advantage in implementing advanced media
+APIs
+which require data transport from Java to C++.
+</body>
+</html>

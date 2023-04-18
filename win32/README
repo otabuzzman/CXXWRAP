@@ -1,0 +1,3 @@
+Use Microsoft Visual C++ to open the workspace: project.dsw
+Then you can build cxxwrap in debug or release configuration
+from the GUI.

@@ -1,0 +1,703 @@
+.\" $Id: cxxwrap.man,v 1.41 2006/12/17 04:08:11 deaven Exp $
+.\" cxxwrap: wrap C++ files and produce documentation
+.\"
+.\"   This program is free software; you can redistribute it and/or modify
+.\"   it under the terms of the GNU General Public License as published by
+.\"   the Free Software Foundation; either version 2 of the License, or
+.\"   (at your option) any later version.
+.\"
+.\"   This program is distributed in the hope that it will be useful,
+.\"   but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\"   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\"   GNU General Public License for more details.
+.\"
+.\"   You should have received a copy of the GNU General Public License
+.\"   along with this program; if not, write to the Free Software
+.\"   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH CXXWRAP 1 "1 June 2000"
+.SH NAME
+cxxwrap \- wrap C++ files in Java and produce documentation
+
+.SH SYNOPSIS
+.B cxxwrap
+.BI "[\|\--root="path "\|]"
+.BI "[\|\--files="namefile "\|]"
+.B "[\|\--jni\|]"
+.BI "[\|\--classpath="path "\|]"
+.BI "[\|\--jni-makefile="file "\|]"
+.BI "[\|\--jni-packages="pkg[,pkg2...\|] "\|]"
+.BI "[\|\--jni-import-hook="file "\|]"
+.BI "[\|\--jni-begin-hook="file "\|]"
+.BI "[\|\--jni-end-hook="file "\|]"
+.B "[\|\--jni-callbacks\|]"
+.B "[\|\--jni-attributes\|]"
+.B "[\|\--jni-operators\|]"
+.B "[\|\--jni-expand-defaults\|]"
+.BI "[\|\--write-cache="file "\|]"
+.BI "[\|\--read-cache="file "\|]"
+.B "[\|\--cache-comments\|]"
+.BI "[\|\--template-package=["parameter|invoking|auto "\|]"
+.BI "[\|\--package-prefix="path "\|]"
+.B "[\|\--man\|]"
+.BI "[\|\--manpath="path "\|]"
+.B "[\|\--html\|]"
+.BI "[\|\--htmlpath="path "\|]"
+.B "[\|\--html-autolink\|]"
+.B "[\|\--html-printable\|]"
+.B "[\|\--public-doc\|]"
+.BI "[\|\--analyze="file "\|]"
+.BI "[\|\--depend="file "\|]"
+.B "[\|\--verbose\|]"
+.B "[\|\--trace\|]"
+.B "[\|\--help\|]"
+.BI "[\|" "file ..." "\|]"
+.RB
+
+.SH DESCRIPTION
+.IX cxxwrap "" "\fLcxxwrap\fR \(em wrap C++ libraries in Java."
+.B cxxwrap
+reads some C++ header files which define a set of classes to be
+documented and/or wrapped in Java.  Output filters for HTML
+documentation, manual page documentation, and Sun's Java JNI (Java to
+Native Interface) wrappers for Java are provided.  
+.B cxxwrap
+also provides a simple analysis package which computes statistical
+data about the API being wrapped or documented.
+
+.SH OPTIONS
+.PP
+.TP
+.BI \--root= path
+Read all subsequent headers from directories under
+.IR path .
+For example, specifying "--root=foo bar/baz.h" is equivalent to
+specifying "foo/bar/baz.h", except that the package of the class "baz"
+(defined in "baz.h") will be "bar", 
+.I not
+"foo/bar".  Files with absolute pathnames are unaffected by
+the value of
+.IR path .
+This feature is useful if you have a large file of relative pathnames,
+which you want
+.B cxxwrap 
+to read from another directory, and the directory prefix is not
+relevant to the Java package assignments or to the C++ documentation's
+listing of the header file to include for these classes.  (Also see
+the --package-prefix
+option for a way to add extra package prefix onto each class's package
+assignment.)
+
+.TP
+.BI \--files= file
+Read
+.I file
+to get the names of all header files to scan (instead of listing them
+on the command line).  It is useful when there are too many classes in
+the library and the command line becomes too unwieldy for your shell.
+Note that any --root
+option will still be in effect (the filenames read from 
+.I file
+are relative paths, just as if they had been entered on the 
+command line).
+
+.TP
+.B \--jni
+Generate Java JNI wrappers, which consist of C++ sources for the
+native part, and Java sources for the Java part of the JNI interface.
+After running this you will need to compile both the C++ and Java
+sources.  (See below for more details about how the Java code is
+generated.)
+
+.TP
+.BI \--classpath= path
+Use 
+.I path
+as the path to write the Java and C++ JNI files.  Note that
+the Java package name will determine the actual target subdirectory
+under
+.IR path .
+For each class
+.IR C ,
+.B cxxwrap
+writes files
+.IR C "_jni.cxx"
+and
+.IR C ".java"
+files under 
+.IR path .
+(This option is only useful if --jni is also specified.)
+
+.TP
+.BI \--jni-makefile= file
+Write a definition of the make symbol JNIOBJ to the file
+.IR file .
+This can help in writing makefiles for building JNI shared libraries.
+The definition will include all object files (assumed to be formed by
+substituting .o for .cxx in the C++ source filename).
+
+.TP
+.BI \--jni-packages= pkg[,pkg2...]
+Only emit JNI definitions for classes in the specified packages.
+This is of value if you have previously wrapped one or more C++
+libraries, and are adding more wrappers at a later date.  You still
+need to parse the original headers (or read them from 
+cache, see the --read-cache
+option), but you do not need to emit any JNI code for them.
+
+.TP
+.BI \--jni-import-hook= file
+Specify some Java code which will be inserted in every generated Java
+file for the JNI implementation, immediately after the import
+statements.  The code is read from
+.IR file .
+This can be used with --jni-begin-hook and --jni-end-hook
+to put coding hooks into the JNI Java code.  For example if
+you wish to monitor entry into native code for the purposes of
+guarding unthreadsafe native code with a locking mechanism.
+
+.TP
+.BI \--jni-begin-hook= file
+Specify some Java code which will be inserted in every generated Java
+file for the JNI implementation, at the beginning of the method and
+prior to any native method invocations.
+The code is read from
+.IR file .
+If the comment of a method contains the string <! NO_JNI_HOOK !>, then
+the hooks (begin and end) are not incuded for that method.
+
+.TP
+.BI \--jni-end-hook= file
+Specify some Java code which will be inserted in every generated Java
+file for the JNI implementation, at the end of the method and
+after to any native method invocations.
+The code is read from
+.IR file .
+If the comment of a method contains the string <! NO_JNI_HOOK !>, then
+the hooks (begin and end) are not incuded for that method.
+
+.TP
+.B \--jni-callbacks
+Specify that generic C++ callback interfaces gets wrapped as
+a Java interface.  The recognized pattern is
+
+    typedef void(*callback_func)(int i, ExampleData* ed, void* userdata);
+    void registerCallback(void* userdata, callback_func cbfunc);
+
+This code will be wrapped into a Java interface specification and a method
+which accepts objects implementing thie interface:
+
+    public interface callback_funcCallback {
+        public void callback_func(int i, ExampleData ed);
+    }
+
+and
+
+    public void registerCallback(callback_funcCallback cbfunc) { ... }
+
+.TP
+.B \--jni-attributes
+Specify that C++ public attributes should have accessor methods
+generated automatically.
+
+.TP
+.B \--jni-operators
+Specify that C++ operator overloads should be wrapped in Java.  This
+is done by replacing the operator name with an text equivalent, e.g.
+"operator +=" becomes "AddEq".
+
+.TP
+.B \--jni-expand-defaults
+Expand C++ methods with default values of parameters into multiple methods
+in Java which have no default parameters.  This allows a crude Java approximation
+of the C++ facility for matching various methods signatures.
+
+.TP
+.BI \--write-cache= file
+After all other processing is complete, cache the currently known
+class definitions to
+.IR file .
+The format of the cache is dependent on the exact version of cxxwrap
+(it is not expected to be maintained across versions).  This option
+can be used to capture class definitions for later JNI wrapping,
+especially for template definitions and expansions.
+
+Only one instance of this option can be used (the last one given will be
+honored).
+
+.TP
+.BI \--read-cache= file
+Read 
+.I file
+to preload a number of previously known class definitions.  Any number
+of instances of this option may be used.
+
+.TP
+.B \--cache-comments
+Include comments in the cache (see --read-cache and --write-cache
+options).  Normally,
+.B cxxwrap
+does not include comments in the cache, meaning that the documentation
+for the cached classes is lost.  New JNI wrappers (or wrappers for
+extended packages) may still be generated from the cache.  Use this
+option to save space in the cache.
+
+.TP
+.BI \--template-package= mode
+Specify a policy for deciding which package a C++ template
+instatiation belongs to.  The available values of
+.I mode
+are
+
+invoking 
+    templates are instantiated in the
+    package of the first class that invokes
+    them.  Since cxxwrap's order of operating
+    on classes is somewhat arbitrary,
+    this can lead to random placement of
+    template definitions.
+
+parameter
+    templates are instantiated in the package
+    of the first object parameter.  If no 
+    known object parameter is present, the 
+    invoking package is used.
+
+auto (default)
+    search for package dependencies between
+    the template source package and the
+    parameters, and instantiate the template
+    in the lowest common dependent package.
+
+.TP
+.BI \--package-prefix= path
+Set a prefix for Java packages which are generated from C++ include
+paths.  For example, you might want classes found in the header file
+"foo/classes.h" to be part of the package "org.foomania.dave.foo", so
+you would specify "--package-prefix=org.foomania.dave" to
+.B cxxwrap
+in order to accomplish this.
+You should only give this option once.  The default is no prefix.
+
+.TP
+.BI \--man
+Generate manual pages documenting each class.
+
+.TP
+.BI \--manpath= path
+Use
+.I path
+as a path to the manual pages.  The class pages will be installed
+under the 
+.I man3
+subdirectory in
+.IR path .
+This directory will be created if it does not exist.
+
+.TP
+.BI \--html
+Generate HTML pages documenting each class.
+
+.TP
+.BI \--htmlpath= path
+Use
+.I path
+as a path to write the HTML files.  All of the generated HTML,
+including an index file 
+.IR index.html ,
+will be written to the
+.I path 
+directory.  The directory
+.I path
+will be created if it does not exist.
+
+.TP
+.BI \--html-autolink
+Automatically link class name references to documented definitions.
+Although Sun's javadoc does not do this, and the javadoc documentation
+web page claims it is morally wrong, it can be desirable for many C++
+packages, the class names of which are typically distinguished from
+ordinary words by a prefix (e.g. package "Foo", class "Controller" 
+is named "FooController").
+
+.TP
+.BI \--html-printable
+Generate simplified HTML which is suitable for printing with a HTML
+tool such as html2ps.  This means using standard structured HTML
+instead of frames and tables, and not including hyperlinked navigation
+panels.
+
+.TP
+.BI \--public-doc
+Do not document protected or private methods in HTML or man pages.
+
+.TP
+.BI \--analyze= file
+Write an analysis of the toolkit API scanned to 
+.IR file .
+The analysis lists the number of classes, average class size (in terms
+of methods), and statistics related to the documentation of the
+classes.  This is useful for measuring the progress of documentation
+projects, and may be useful for developing heuristics about what type
+of documentation coverage and cross referencing is most effective.
+
+.TP
+.BI \--depend= file
+Write a report of class and package dependencies to
+.IR file .
+
+.TP
+.BI \--verbose
+Give play-by-play commentary on what
+.B cxxwrap
+is doing.
+
+.TP
+.BI \--trace
+Echo all C++ tokens read from header files.  This is used to debug
+the parser, and isn't particularly useful or even interesting
+otherwise.
+
+.TP
+.BI \--help
+Print a short help screen summarizing the available options.
+
+.SH "CLASSES AND PACKAGES"
+.PP
+Since
+.B cxxwrap
+is designed to work with C++ and Java, it needs a scheme for assigning
+a Java package to a C++ class. The convention followed by
+.B cxxwrap
+is to use the C++ class's relative header file path as the package name.
+So, for example, if you tell 
+.B cxxwrap
+to read the file "example/sub/MyClass.h", any classes discovered in this
+file are considered to belong to the "example.sub" package.  Note that many
+classes may be defined in a given header file, and the name of the header
+file need not match that of any of the classes defined within it.  Of
+course, the JNI produced by
+.B cxxwrap
+must follow the java rules, which require the java file to match names
+with the class defined in the file.
+
+If C++ namespaces are used, the namespace is appended to the path
+derived by the rules above to arrive at the final package name.  So,
+for example, if the header file "foo/a.h" defines class C in namespace
+"bar", the Java package will be "foo.bar", and class C's full name in
+Java will be "foo.bar.C".
+
+.SH "COMMENT PARSING"
+.PP
+Comments of three varieties are recognized by
+.BR cxxwrap .
+The philosophy is to try and parse the widest variety of comments, so
+that large legacy code bases can be quickly documented without having
+to perform tedious comment updates.
+
+Standard C style comments beginning with /* and ending with */
+are recognized.  
+.B cxxwrap
+will ignore asterisks which begin comment lines, so that the comment
+style such as
+
+/* this is
+ * the way some
+ * folks like to 
+ * write comments.
+ */
+
+will work correctly (i.e. the asterisks will not be seen).
+.B cxxwrap
+also recognizes C++ style comments, which begin with // and go to the
+end of the line.  C++ style comments may span several lines (each of
+which must begin with a // sequence).  Within the body of a comment,
+references to known classes cause
+.B cxxwrap
+to use an HTML hyperlink so that the reader can look up the class API
+directly from the comment text.
+
+Comments are associated with the declaration immediately
+.I following
+them.  Thus, the following comments will be assigned correctly by
+.BR cxxwrap :
+
+    // a function named foo
+    int foo();
+
+    /* a method named bar */
+    int bar();
+
+while the following comment is not going to work, since it comes after
+the declaration:
+
+    int foobar(); // a method named foobar
+
+.B cxxwrap
+also recognizes
+.I javadoc
+style comments, which begin with /** and end with */, and uses
+the 
+.I javadoc
+tags in them to add extra information to the API listing.  For a
+complete description of javadoc comment tags, see the web page
+.B http://java.sun.com/products/jdk/javadoc/writingdoccomments.html
+on Sun's public web site.
+The following standard javadoc tags are recognized by
+.BR cxxwrap :
+.TP
+.B @param
+describe a method parameter.
+.TP
+.B @return 
+describe the return value of a method.
+.TP
+.B @see
+generate a "see also" link.
+.TP
+.B @author
+define the author of the current class or method..
+.TP
+.B @date
+define the date on which the current comment was last edited.
+.TP
+.B @version
+define the version string of the current class or method.
+.TP
+.B @deprecated
+deprecate an API.
+
+.PP
+In addition to these tags,
+.B cxxwrap
+also recognizes two non-standard javadoc tags:
+.TP
+.B @header
+add text to the "header" section of the class documentation
+(this tag is only recognized for class comments).
+.TP
+.B @package
+add text to the package summary for the current package.
+.B cxxwrap
+will also look for a file called "PackageSummary.html" in the include path
+for each package when generating documentation. This file is assumed to
+contain a description of what is in the package, and will be
+included in the package summary part of the documentation.
+
+
+.PP
+When javadoc style comments are used, 
+.B cxxwrap
+assumes that the contents of the comment are in HTML format.  Some
+special handling of angle brackets is done, so that comments which
+include simple '<' and '>' characters which are not part of an HTML
+tag can be used without HTML escape sequences in the comment text.
+This allows comments to be more readable as plain ASCII.  Also, as a
+convenience, 
+.B cxxwrap
+will ignore a line of asterisks which begin a comment, so that comments
+delimited by a row of asterisks may be used:
+
+/*********************************************
+ * This is considered to be a javadoc comemnt,
+ * and the first line of asterisks is ignored.
+ */
+
+.PP
+Classes which are not intended to be part of the public API may be designated
+by including the string "<<NOT_API>>" in the class comment.  This will
+prevent 
+.B cxxwrap
+from including the class's documentation as part of any generated documentation.
+
+.SH "JAVA CODE GENERATION"
+.PP
+.B cxxwrap
+generates Java code for all classes which are part of the public API.
+The java API mimics the C++ API, with the following rules and
+restrictions:
+.TP
+pointers, references, and objects
+All of the java objects generated by
+.B cxxwrap
+correspond with a C++ pointer.
+There is no concept of local native objects allocated on the stack,
+rather conversions are used (and appropriate C++ copy constructors may
+need to be supplied for this use) to allocate all java objects on the
+heap.  An extra method "delete()" is present on all of the java
+classes generated by
+.BR cxxwrap ,
+which calls the destructor for the encapsulated pointer.  (Note that
+if the destructor is protected or private, it will not appear in the
+java API.)
+
+.TP
+template generation
+.B cxxwrap
+instantiates templates as needed.  The java class name of the
+instatiated templates is generated by splicing "Of" and "And" strings
+into the classname, so that a C++ "vector<foo>" type becomes "vectorOffoo"
+in java.  (It can get really ugly really fast, but it works.)  By
+default, template
+expansions occur within the package with the least possible
+dependencies (this can be changed using the --template-package
+option).  One possible negative consequence of improper template 
+instatiation policy is that you might have a very common
+expansion, say, "vectorOfint", which many packages use, but the java
+API will be tied to some package that expanded it (because it was
+used in a method parameter or return value).  This could introduce a
+somewhat artificial dependency between the packages.
+
+.TP
+enumerations
+In C++, enumeration types can be used to define compile-time constants.  
+.B cxxwrap
+presents public enumerations defined within the scope of a class as const
+static ints in java.
+
+.TP
+virtual functions
+In java, all methods are virtual.  This has some implications for the
+classes produced by
+.B cxxwrap
+from C++ classes, which may have non-virtual functions.  Your C++
+non-virtual functions must obey the same rules as they would if
+virtual -- such as the fact that they cannot override a method in the
+superclass with the same function signature, but different return
+value.  If you break these rules, the java code produced will be 
+faulty (and javac, the java
+compiler, will notify you with errors at compile time).
+
+.TP
+arrays and strings
+.B cxxwrap
+can wrap arguments or return values which are 
+pointers to arrays of primitive types.
+Due to the way that JNI operates, a java
+interface cannot guarantee that the JVM's memory used for the array actually
+overlays the C++ memory.  So, methods such as
+
+    void foo(int* x);
+
+will be wrapped to present a java interface which internally might
+copy data between the user buffer and the JVM buffer:
+
+    public void foo(int[] x);
+
+Also note that if the method returns a
+pointer to a primitive type, there's no way for 
+.B cxxwrap
+to determine how long the array is, so a default value of "1" is
+used.  This probably isn't what you want, of course.
+
+Character strings are a special case.
+.B cxxwrap
+will represent "const char*" as a "UTF" string in JNI, which means that
+methods will be generated which can use java strings (java.lang.String)
+as arguments to and return values from methods.  Methods returning
+"unsigned char*" will be treated as arrays of java.lang.byte data, just
+like "int *" is an array of java.lang.int data.
+
+.TP
+JNI arguments
+.B cxxwrap
+allows you to wrap C++ methods which have arguments whose
+type is defined by JNI:  JNIEnv* and jobject.  The former is implied,
+meaning that the argument will not appear in the java method, while
+the second maps directly to a
+.IR java.lang.Object .
+For example, the C++ method
+
+    void foo(JNIEnv* env, jobject obj);
+
+will map to the java method
+
+    public void foo(Object obj);
+
+Whenthe method is invoked, the 
+.I env
+argument will be filled in with the JNI environment that is passed
+by the JVM to the native method.  The
+.I obj
+argument will be passed directly to the C++ method as type
+.IR jobject .
+
+.TP
+C++ invoking Java
+.B cxxwrap
+provides a way for Java programs to invoke C++ implementations.
+Frequently, you also need to have the C++ implementation invoke Java.
+For example, you might want to extend one of the classes defined by 
+.B cxxwrap
+in Java.
+
+.B cxxwrap
+provides a facility for doing so, by using abstract classes.  When an
+abstract C++ class is wrapped in JNI, 
+.B cxxwrap
+provides a default Java constructor which will produce an implementation
+whose pure virtual methods are "live" in Java -- they can be extended
+in Java and if a C++ class invokes them, the Java method will be
+called.  At present, only pure virtual functions whose return value is
+void or primitive, and whose arguments are all non-array types 
+will be treated this way.  Additionally, any Java extension
+of the class must take care to implement all of the pure virtual
+methods.  Although legal Java code results even if some
+implementations are left out, any code which called such a method
+would enter an infinite recursion across the JNI boundary, usually
+resulting in a core dump when memory is exhausted.
+
+.SH "HTML DOCUMENTATION GENERATION"
+.PP
+The following notes apply to the HTML documentation produced by
+.BR cxxwrap .
+
+Classes which are not processed by
+.B cxxwrap
+may still be shown in the HTML documentation of a class's hierarchy,
+but will be called out as not documented. 
+
+
+.SH "C++ LIMITATIONS"
+.PP
+The following notes describe some general limitations
+in the
+.B cxxwrap
+C++ parser.  The parser is very fast but does not implement the full
+set of C++ language features, and does not parse every bit
+of the C++ code it encounters.  Do not use
+.B cxxwrap
+to verify C++ syntax!
+
+.B cxxwrap
+only recognizes single public inheritance (only one superclass).
+Private inheritance is ignored, and multiple inheritance is treated as
+if only the first class given in the declaration is a superclass.
+
+Class export specifiers (needed on Microsoft platforms) are assumed to
+be represented by a single token (such as a #define macro) appearing
+before the class name and immediately after the "class" keyword.
+These specifiers are ignored.  For example, in the declaration
+
+    class MY_EXPORT foo { ... };
+
+the symbol MY_EXPORT will be ignored by
+.BR cxxwrap .
+No C preprocessor macros are resolved by 
+.BR cxxwrap .
+
+
+.SH SEE ALSO
+javac(1), javah(1), javadoc(1)
+
+.B http://java.sun.com/products/jdk/javadoc/writingdoccomments.html
+
+.SH BUGS
+.PP
+See the file "BUGS" in the distribution.
+
+.SH AUTHOR
+.PP
+.B cxxwrap
+was written by David Deaven (deaven@deaven.net).
+Java(tm) is a registered trademark of Sun Microsystems Inc.
