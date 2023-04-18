@@ -1,41 +1,54 @@
-SHELL=/bin/sh
+ifeq ($(OS),Windows_NT)
+	winos := 1
+else
+	linos := 1
+endif
 
-CXX = @CXX@
-YACC = @YACC@
+CXX   = @CXX@
+YACC  = @YACC@
 NROFF = @NROFF@
+
 .SUFFIXES: .cxx .y .o
 
 OBJ = \
-    html.o \
-    main.o \
-    man.o \
-    misc.o \
-    parser.o \
+    html.o           \
+    main.o           \
+    man.o            \
+    misc.o           \
+    parser.o         \
     AnalyzeEmitter.o \
-    ArrayCType.o \
-    Arg.o \
-    Class.o \
-    ClassJar.o \
-    CommentParser.o \
-    CType.o \
-    CreateCType.o \
-    DependEmitter.o \
-    Emitter.o \
-    EnumCType.o \
-    FunctionCType.o \
-    JavadocLink.o \
-    JNIEmitter.o \
-    JNICType.o \
-    Method.o \
-    ObjectCType.o \
+    ArrayCType.o     \
+    Arg.o            \
+    Class.o          \
+    ClassJar.o       \
+    CommentParser.o  \
+    CType.o          \
+    CreateCType.o    \
+    DependEmitter.o  \
+    Emitter.o        \
+    EnumCType.o      \
+    FunctionCType.o  \
+    JavadocLink.o    \
+    JNIEmitter.o     \
+    JNICType.o       \
+    Method.o         \
+    ObjectCType.o    \
     PrimitiveCType.o \
-    StringPool.o \
-    Token.o \
-    VoidCType.o
+    StringPool.o     \
+    Token.o          \
+    VoidCType.o      \
 
-all: cxxwrap cxxwrap.1
+ifdef winos
+EXE = cxxwrap.exe
+DLL = dll
+else
+EXE = cxxwrap
+DLL = so
+endif
 
-cxxwrap: $(OBJ)
+all: $(EXE) cxxwrap.1
+
+$(EXE): $(OBJ)
 	$(CXX) -o $@ $(OBJ)
 
 cxxwrap.1: cxxwrap.man
@@ -50,21 +63,32 @@ api: cxxwrap
 	/bin/mv y.tab.c $*.cxx
 
 .y.o:
-	$(YACC) -v $<
+	$(YACC) -Wno-other -v $<
 	/bin/rm -f $*.cxx
 	/bin/mv y.tab.c $*.cxx
-	$(CXX) -c $*.cxx
+	$(CXX) -Wno-write-strings -c $*.cxx
 
 .cxx.o:
-	$(CXX) -c $<
+	$(CXX) -Wno-write-strings -c $<
 
 depend:
 	makedepend -Y -fMakefile *.cxx >/dev/null 2>&1
 
+install: $(EXE)
+	/bin/install -m 775 $(EXE) /usr/local/bin
+
 clean:
-	/bin/rm -f cxxwrap cxxwrap.1 y.output *.o config.cache
+	/bin/rm -f $(EXE) cxxwrap.1 y.output *.o config.cache
 	/bin/rm -rf api
 
 distclean: clean
-	/bin/rm -f config.log config.status examples/*.class examples/*.o examples/*_jni.cxx examples/*.java examples/*.txt examples/*.so examples/jni.make
+	/bin/rm -f Makefile parser.cxx
+	/bin/rm -f config.log config.status \
+	examples/*.class examples/*.o       \
+	examples/*.java examples/*_jni.cxx  \
+	examples/jni.make                   \
+	examples/*.txt                      \
+	examples/*.$(DLL)                   \
+
 	/bin/rm -rf examples/man examples/html examples/cman examples/chtml
+

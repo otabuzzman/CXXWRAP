@@ -466,7 +466,7 @@ var_decl:
     |   type id array_type_indirections
         {
 	    $$ = new Method($1->comment, $2->val, NULL);
-	    if ($3 >= 0)
+	    if ($3[0] >= 0)
 	    {
                 $$->type = $1;
                 while (--$3[0]) $$->type = new ArrayCType($$->type, $3[$3[0]+1]);
