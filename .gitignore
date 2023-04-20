@@ -1,0 +1,11 @@
+Makefile
+config.cache
+config.log
+config.status
+cxxwrap
+cxxwrap.1
+parser.cxx
+y.output
+*.exe
+*.o
+

@@ -69,7 +69,7 @@ api: cxxwrap
 	$(CXX) -Wno-write-strings -c $*.cxx
 
 .cxx.o:
-	$(CXX) -Wno-write-strings -c $<
+	$(CXX) -Wno-write-strings -Wno-format-security -c $<
 
 depend:
 	makedepend -Y -fMakefile *.cxx >/dev/null 2>&1
