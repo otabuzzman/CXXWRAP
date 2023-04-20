@@ -1085,6 +1085,7 @@ object_type_primitive:
 type_indirection: 
         '*' { $$ = CType::M_POINTER; } 
     |	'&' { $$ = CType::M_REFERENCE; } 
+    |	ANDAND /* REFREF */ { $$ = CType::M_REFERENCE; }
     ;
 
 integral_type_primitive:
