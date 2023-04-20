@@ -148,6 +148,7 @@ static int check_new_classdef(Class* c);
 %token<str> COMMENT
 %token<str> CPP_DIRECTIVE
 %token<str> CONST
+%token<str> NOEXCEPT
 %token<str> VOLATILE
 %token<str> REGISTER
 %token<str> OPERATOR
@@ -188,7 +189,7 @@ static int check_new_classdef(Class* c);
 %type<type> type, type_mod, type_mods, type_red1, object_type_primitive, type_primitive, integral_type_primitive, type_decl, enum_decl
 %type<objtype> parent_spec, parent_decl, parent_list
 %type<clazz> class_decl
-%type<immediate> array_type_indirection, type_indirection, func_end, func_mods, unary_operator, binary_operator, opt_bitfield
+%type<immediate> array_type_indirection, type_indirection, func_end, func_mods, func_mod, unary_operator, binary_operator, opt_bitfield
 %type<immediates> array_type_indirections
 %type<expr> constant_expr, opt_constant_expr, unary_expr, postfix_expr, primary_expr, cast_expr, multiplicative_expr, additive_expr, shift_expr, relational_expr
 %type<expr> equality_expr, and_expr, inclusive_or_expr, exclusive_or_expr, logic_and_expr, logic_or_expr, assignment_expr, c_expr
@@ -798,7 +799,16 @@ func_end:
     |   '=' NUM ';' { $$ = 1; }
     ;
 
-func_mods: /* nil */ { $$ = 0; } | CONST { $$ = 1; } ;
+func_mods:
+        /* nil */ { $$ = 0; }
+    |    func_mod
+    |    func_mod func_mods
+    ;
+
+func_mod:
+    |    CONST { $$ = 1; }
+    |    NOEXCEPT { $$ = 1; }
+    ;
 
 opt_init_list : /* nil */ | ':' init_list ;
 
@@ -1278,6 +1288,7 @@ static struct {
   {"char", CHAR},
   {"bool", BOOL},
   {"const", CONST},
+  {"noexcept", NOEXCEPT},
   {"operator", OPERATOR},
   {"typedef", TYPEDEF},
   {"unsigned", UNSIGNED},
