@@ -148,6 +148,7 @@ static int check_new_classdef(Class* c);
 %token<str> COMMENT
 %token<str> CPP_DIRECTIVE
 %token<str> CONST
+%token<str> CONSTEXPR
 %token<str> NOEXCEPT
 %token<str> VOLATILE
 %token<str> REGISTER
@@ -973,7 +974,8 @@ type_mods:
     ;
 
 type_mod:
-     	CONST { $$ = new CType($1->comment, CType::M_CONST); } 
+        CONST { $$ = new CType($1->comment, CType::M_CONST); }
+    |   CONSTEXPR { $$ = new CType($1->comment, CType::M_CONST); }
     |   STATIC { $$ = new CType($1->comment, CType::M_STATIC); }
     |   VOLATILE { $$ = new CType($1->comment, CType::M_VOLATILE); }
     |   REGISTER { $$ = new CType($1->comment, CType::M_REGISTER); }
@@ -1288,6 +1290,7 @@ static struct {
   {"char", CHAR},
   {"bool", BOOL},
   {"const", CONST},
+  {"constexpr", CONSTEXPR},
   {"noexcept", NOEXCEPT},
   {"operator", OPERATOR},
   {"typedef", TYPEDEF},
