@@ -589,11 +589,25 @@ enum_decl:
 	{
 	    $$ = new EnumCType($1->comment, $3->val, $5);
 	}
+    |   ENUM CLASS scoped_id '{' enum_item_list ',' '}'
+	{
+	    $$ = new EnumCType($1->comment, $3->val, $5);
+	}
     |   ENUM scoped_id '{' enum_item_list '}'
 	{
 	    $$ = new EnumCType($1->comment, $2->val, $4);
 	}
+    |   ENUM scoped_id '{' enum_item_list ',' '}'
+	{
+	    $$ = new EnumCType($1->comment, $2->val, $4);
+	}
     |   ENUM '{' enum_item_list '}'
+	{
+	    char buf[32];
+	    sprintf(buf, "anon%d", local.serial++);
+	    $$ = new EnumCType($1->comment, global.pool.add(buf), $3);
+	}
+    |   ENUM '{' enum_item_list ',' '}'
 	{
 	    char buf[32];
 	    sprintf(buf, "anon%d", local.serial++);
