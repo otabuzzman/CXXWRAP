@@ -165,6 +165,7 @@ static int check_new_classdef(Class* c);
 %token<str> RETURN
 %token<str> NORETURN
 %token<str> NODISCARD
+%token<str> DEFAULT
 
 %right '='
 %right ANDEQUALS OREQUALS
@@ -821,6 +822,7 @@ func_end:
     |   func_end ';' { $$ = $1; }
     |   opt_init_list '{' { local.eatc = 1; } CTEXT { $$ = 0; }
     |   '=' NUM ';' { $$ = 1; }
+    |   '=' DEFAULT ';' { $$ = 1; }
     ;
 
 func_mods:
@@ -1328,6 +1330,7 @@ static struct {
   {"extern", EXTERN},
   {"noreturn", NORETURN},
   {"nodiscard", NODISCARD},
+  {"default", DEFAULT},
   {NULL, 0}
 };
 
