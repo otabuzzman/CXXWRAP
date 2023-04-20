@@ -499,6 +499,14 @@ id_list:
 	{
 	    $$ = $1;
 	}
+    |   id  '=' constant_expr
+	{
+	    $$ = $1;
+	}
+    |   id  '{' constant_expr '}'
+	{
+	    $$ = $1;
+	}
     |   id ',' id_list
 	{
 	    char buf[TOKEN_BUFFER_SIZE];
