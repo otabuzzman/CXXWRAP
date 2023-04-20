@@ -578,7 +578,11 @@ type_decl:
     ;
 
 enum_decl:
-        ENUM scoped_id '{' enum_item_list '}'
+        ENUM CLASS scoped_id '{' enum_item_list '}'
+	{
+	    $$ = new EnumCType($1->comment, $3->val, $5);
+	}
+    |   ENUM scoped_id '{' enum_item_list '}'
 	{
 	    $$ = new EnumCType($1->comment, $2->val, $4);
 	}
