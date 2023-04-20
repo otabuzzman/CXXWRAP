@@ -134,6 +134,8 @@ static int check_new_classdef(Class* c);
 %token ANDEQUALS
 %token COLONCOLON
 %token ELLIPSIS
+%token ATTRSTART
+%token ATTREND
 %token<str> CTEXT
 %token<str> TILDE
 %token<str> IDENTIFIER
@@ -161,6 +163,8 @@ static int check_new_classdef(Class* c);
 %token<str> INLINE
 %token<str> EXTERN
 %token<str> RETURN
+%token<str> NORETURN
+%token<str> NODISCARD
 
 %right '='
 %right ANDEQUALS OREQUALS
@@ -184,7 +188,7 @@ static int check_new_classdef(Class* c);
 %nonassoc IF
 %nonassoc ELSE
 
-%type<str> id, opt_id, opt_scoped_id, scoped_id, id_list, opt_var_assign, opt_var_assign_text, cpp_operator, assignment_operator
+%type<str> id, opt_id, opt_scoped_id, scoped_id, id_list, opt_var_assign, opt_var_assign_text, cpp_operator, assignment_operator, attr
 %type<method> class_def_body, class_def_item, scoped_class_def_item, friend_decl, method_decl, var_decl, func
 %type<arg> arg_list, culled_arg_list, type_list, arg, func_arg, enum_item, enum_item_list, template_par, template_par_list
 %type<type> type, type_mod, type_mods, type_red1, object_type_primitive, type_primitive, integral_type_primitive, type_decl, enum_decl
@@ -670,6 +674,15 @@ method_decl:
 		$$->comment = $1->comment;
 	    }
 	}
+    |   attr_list type func
+        {
+	    $$ = $3;
+	    if ($$)
+	    {
+		$$->type = $2;
+		$$->comment = $2->comment;
+	    }
+	}
     |   VIRTUAL type func
         {
 	    $$ = $3;
@@ -680,6 +693,16 @@ method_decl:
 		$$->comment = $1->comment;
 	    }
 	}
+    ;
+
+attr_list:
+        ATTRSTART attr ATTREND
+    |   ATTRSTART attr ',' attr_list ATTREND
+    ;
+
+attr:
+        NORETURN { $$ = NULL; }
+    |   NODISCARD { $$ = NULL; }
     ;
 
 func:
@@ -1303,6 +1326,8 @@ static struct {
   {"return", RETURN},
   {"inline", INLINE},
   {"extern", EXTERN},
+  {"noreturn", NORETURN},
+  {"nodiscard", NODISCARD},
   {NULL, 0}
 };
 
@@ -1548,6 +1573,18 @@ static int lex_kernel(YYSTYPE* val)
 	    local.lex.unget(c);
 	    return csave;
         }
+    }
+
+    if (c == '[' || c == ']')
+    {
+	int csave = c;
+	c = local.lex.get();
+	if (c == csave)
+	{
+	    return (c == '[' ? ATTRSTART : ATTREND);
+	}
+	local.lex.unget(c);
+	return csave;
     }
 
     if (c == '>' || c == '<')
@@ -1837,6 +1874,8 @@ static int lex_no_context(YYSTYPE* val)
 	    case OROR: printf("(||)"); break;
 	    case OREQUALS: printf("(|=)"); break;
 	    case ANDEQUALS: printf("(&=)"); break;
+	    case ATTRSTART: printf("([[)"); break;
+	    case ATTREND: printf("(]])"); break;
 	    default: printf("(%c) ", s); break;
 	    }
 	}
