@@ -633,7 +633,7 @@ int JNIEmitter::emit_ctor(FILE* fjava, FILE* fcxx, Class* c, Method* m)
         fprintf(fjava,"super((Long) null);\n");
     }
     if (begin_hook && !(m->notes & Method::NO_JNI_HOOK)) fputs(begin_hook, fjava);
-    fprintf(fjava, "implementation = new Long(__c%d(", m->serial);
+    fprintf(fjava, "implementation = Long.valueOf(__c%d(", m->serial);
     for (first = 1, a = m->args; a != NULL; a = a->next)
     {
         /* We can ignore void pointers if this method registers a callback function
@@ -1911,7 +1911,7 @@ int JNIEmitter::emit_class(Class* c)
 	fprintf(fjava, 
 	    "public %s() {\n"
 	    "%s%s\n"
-	    "implementation = new Long(__cdefault());\n"
+	    "implementation = Long.valueOf(__cdefault());\n"
 	    "%s\n}\n"
 	    "private native long __cdefault();\n",
 	    c->type()->JavaTypeName(),

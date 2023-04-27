@@ -199,7 +199,7 @@ const char*
 ObjectCType::JavaUpCast(const char* expr)
 {
     char buf[TOKEN_BUFFER_SIZE];
-    sprintf(buf, "(%s == 0 ? null : new %s(new Long(%s)))",
+    sprintf(buf, "(%s == 0 ? null : new %s(Long.valueOf(%s)))",
 	expr, JavaTypeName(), expr);
     return global.pool.add(buf);
 }
